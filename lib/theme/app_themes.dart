@@ -36,15 +36,15 @@ final ThemeData lightTheme = ThemeData(
     titleLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
   ),
 
-  cardTheme: const CardTheme(
-    color: Colors.white,
-    shadowColor: Colors.black12,
-    elevation: 4,
-    margin: EdgeInsets.all(8),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-    ),
-  ),
+  // cardTheme: const CardTheme(
+  //   color: Colors.white,
+  //   shadowColor: Colors.black12,
+  //   elevation: 4,
+  //   margin: EdgeInsets.all(8),
+  //   shape: RoundedRectangleBorder(
+  //     borderRadius: BorderRadius.all(Radius.circular(12)),
+  //   ),
+  // ),
 
   iconTheme: const IconThemeData(color: AppColors.royalBlue),
 
@@ -81,12 +81,12 @@ final ThemeData lightTheme = ThemeData(
     selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
   ),
 
-  dialogTheme: const DialogTheme(
-    backgroundColor: Colors.white,
-    titleTextStyle: TextStyle(color: AppColors.textDark, fontSize: 18, fontWeight: FontWeight.bold),
-    contentTextStyle: TextStyle(color: AppColors.textDark),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-  ),
+  // dialogTheme: const DialogTheme(
+  //   backgroundColor: Colors.white,
+  //   titleTextStyle: TextStyle(color: AppColors.textDark, fontSize: 18, fontWeight: FontWeight.bold),
+  //   contentTextStyle: TextStyle(color: AppColors.textDark),
+  //   shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+  // ),
 
   dividerColor: Colors.grey[300],
 );
@@ -126,15 +126,15 @@ final ThemeData darkTheme = ThemeData(
     titleLarge: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
   ),
 
-  cardTheme: const CardTheme(
-    color: AppColors.cardDark,
-    shadowColor: Colors.black45,
-    elevation: 4,
-    margin: EdgeInsets.all(8),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-    ),
-  ),
+  // cardTheme: const CardTheme(
+  //   color: AppColors.cardDark,
+  //   shadowColor: Colors.black45,
+  //   elevation: 4,
+  //   margin: EdgeInsets.all(8),
+  //   shape: RoundedRectangleBorder(
+  //     borderRadius: BorderRadius.all(Radius.circular(12)),
+  //   ),
+  // ),
 
   iconTheme: const IconThemeData(color: AppColors.textLight),
 
@@ -173,12 +173,12 @@ final ThemeData darkTheme = ThemeData(
     selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
   ),
 
-  dialogTheme: const DialogTheme(
-    backgroundColor: AppColors.cardDark,
-    titleTextStyle: TextStyle(color: AppColors.textLight, fontSize: 18, fontWeight: FontWeight.bold),
-    contentTextStyle: TextStyle(color: AppColors.textLight),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-  ),
+  // dialogTheme: const DialogTheme(
+  //   backgroundColor: AppColors.cardDark,
+  //   titleTextStyle: TextStyle(color: AppColors.textLight, fontSize: 18, fontWeight: FontWeight.bold),
+  //   contentTextStyle: TextStyle(color: AppColors.textLight),
+  //   shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+  // ),
 
   dividerColor: Colors.grey,
 );
