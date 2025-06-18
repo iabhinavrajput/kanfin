@@ -3,56 +3,54 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kifinserv/constants/app_colors.dart';
 import 'package:kifinserv/routes/app_routes.dart';
-import 'package:kifinserv/services/vehicle_service.dart';
+import 'package:kifinserv/services/vendor_service.dart';
 import 'package:kifinserv/services/application_storage_service.dart';
-import 'package:kifinserv/models/vehicle_model.dart';
 import 'package:kifinserv/models/vendor_model.dart';
+import 'package:kifinserv/models/loan_types_model.dart';
 
-class EVVehicleSelectionScreen extends StatefulWidget {
-  const EVVehicleSelectionScreen({super.key});
+class VendorSelectionScreen extends StatefulWidget {
+  const VendorSelectionScreen({super.key});
 
   @override
-  State<EVVehicleSelectionScreen> createState() =>
-      _EVVehicleSelectionScreenState();
+  State<VendorSelectionScreen> createState() => _VendorSelectionScreenState();
 }
 
-class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
-  List<VehicleData> vehicles = [];
+class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
+  List<VendorData> vendors = [];
   bool isLoading = true;
   String? errorMessage;
-  VehicleData? selectedVehicle;
-  VendorData? selectedVendor;
+  LoanTypeData? selectedLoanType;
 
   @override
   void initState() {
     super.initState();
-    selectedVendor = ApplicationStorageService.getSelectedVendor();
-    _fetchVehicles();
+    selectedLoanType = ApplicationStorageService.getSelectedLoanType();
+    _fetchVendors();
   }
 
-  Future<void> _fetchVehicles() async {
+  Future<void> _fetchVendors() async {
     try {
       setState(() {
         isLoading = true;
         errorMessage = null;
       });
 
-      if (selectedVendor == null) {
+      if (selectedLoanType == null) {
         throw Exception(
-            'No vendor selected. Please go back and select a vendor.');
+            'No loan type selected. Please go back and select a loan type.');
       }
 
-      print('📤 Fetching vehicles for vendor ID: ${selectedVendor!.id}');
+      print('📤 Fetching vendors for loan type ID: ${selectedLoanType!.id}');
       final response =
-          await VehicleService.getVehiclesByVendor(selectedVendor!.id);
+          await VendorService.getVendorsByLoanType(selectedLoanType!.id);
 
       setState(() {
-        vehicles = response.data;
+        vendors = response.data;
         isLoading = false;
       });
 
       print(
-          '📥 Fetched ${vehicles.length} vehicles for ${selectedVendor!.companyName}');
+          '📥 Fetched ${vendors.length} vendors for ${selectedLoanType!.loanType}');
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -61,23 +59,43 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
     }
   }
 
-  Future<void> _selectVehicle(VehicleData vehicle) async {
+  Future<void> _selectVendor(VendorData vendor) async {
     try {
-      // Store selected vehicle
-      ApplicationStorageService.storeSelectedVehicle(vehicle);
+      // Show loading
+      Get.dialog(
+        const Center(
+          child: CircularProgressIndicator(color: AppColors.royalBlue),
+        ),
+        barrierDismissible: false,
+      );
+
+      // Store selected vendor
+      ApplicationStorageService.storeSelectedVendor(vendor);
+
+      // Close loading dialog
+      Get.back();
 
       // Show success message
       Get.snackbar(
-        'Vehicle Selected',
-        '${vehicle.vehicleName} has been selected',
+        'Vendor Selected',
+        '${vendor.companyName} has been selected',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.royalBlue,
         colorText: Colors.white,
       );
 
-      // Navigate to user details form
-      Get.toNamed(AppRoutes.USER_DETAILS_FORM);
+      // Navigate to next screen based on loan type
+      if (selectedLoanType?.loanType.toLowerCase() == 'ev') {
+        Get.toNamed(AppRoutes.EV_VEHICLE_SELECTION);
+      } else if (selectedLoanType?.loanType.toLowerCase() == 'gold') {
+        Get.toNamed(AppRoutes.USER_DETAILS_FORM);
+      } else {
+        Get.toNamed(AppRoutes.USER_DETAILS_FORM);
+      }
     } catch (e) {
+      // Close loading dialog
+      Get.back();
+
       // Show error
       Get.snackbar(
         'Error',
@@ -98,7 +116,7 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(
-          'Select Vehicle',
+          'Select Vendor',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             color: Colors.white,
@@ -106,7 +124,7 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.royalBlue,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back,
@@ -115,7 +133,7 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: _fetchVehicles,
+        onRefresh: _fetchVendors,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
@@ -124,7 +142,7 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.green,
+                  color: AppColors.royalBlue,
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(screenWidth * 0.08),
                     bottomRight: Radius.circular(screenWidth * 0.08),
@@ -145,14 +163,14 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        Icons.electric_car,
+                        Icons.store_outlined,
                         size: screenWidth * 0.133,
                         color: Colors.white,
                       ),
                     ),
                     SizedBox(height: screenHeight * 0.025),
                     Text(
-                      'Choose Your Vehicle',
+                      'Choose Your Vendor',
                       style: GoogleFonts.poppins(
                         fontSize: screenWidth * 0.064,
                         fontWeight: FontWeight.bold,
@@ -162,16 +180,16 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
                     ),
                     SizedBox(height: screenHeight * 0.01),
                     Text(
-                      selectedVendor != null
-                          ? 'Select a vehicle from ${selectedVendor!.companyName}'
-                          : 'Select a vehicle for your EV loan',
+                      selectedLoanType != null
+                          ? 'Select a vendor for your ${selectedLoanType!.displayName}'
+                          : 'Select a vendor for your loan application',
                       style: GoogleFonts.poppins(
                         fontSize: screenWidth * 0.037,
                         color: Colors.white.withOpacity(0.9),
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    if (vehicles.isNotEmpty && !isLoading)
+                    if (vendors.isNotEmpty && !isLoading)
                       Padding(
                         padding: EdgeInsets.only(top: screenHeight * 0.015),
                         child: Container(
@@ -185,7 +203,7 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
                                 BorderRadius.circular(screenWidth * 0.021),
                           ),
                           child: Text(
-                            '${vehicles.length} vehicles available',
+                            '${vendors.length} vendors available',
                             style: GoogleFonts.poppins(
                               fontSize: screenWidth * 0.032,
                               color: Colors.white.withOpacity(0.9),
@@ -205,24 +223,22 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
                   children: [
                     SizedBox(height: screenHeight * 0.025),
 
-                    // Loading, Error, or Vehicles
+                    // Loading, Error, or Vendors
                     if (isLoading)
                       _buildLoadingWidget(context)
                     else if (errorMessage != null)
                       _buildErrorWidget(context)
-                    else if (vehicles.isEmpty)
+                    else if (vendors.isEmpty)
                       _buildEmptyWidget(context)
                     else
                       Column(
                         children: [
-                          ...vehicles.map((vehicle) => Column(
+                          ...vendors.map((vendor) => Column(
                                 children: [
-                                  _buildVehicleCard(
+                                  _buildVendorCard(
                                     context: context,
-                                    vehicle: vehicle,
-                                    onTap: () => _selectVehicle(vehicle),
-                                    isSelected:
-                                        selectedVehicle?.id == vehicle.id,
+                                    vendor: vendor,
+                                    onTap: () => _selectVendor(vendor),
                                   ),
                                   SizedBox(height: screenHeight * 0.025),
                                 ],
@@ -246,10 +262,12 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
       child: Column(
         children: [
           SizedBox(height: screenHeight * 0.1),
-          const CircularProgressIndicator(color: Colors.green),
+          const CircularProgressIndicator(color: AppColors.royalBlue),
           SizedBox(height: screenHeight * 0.02),
           Text(
-            'Loading vehicles...',
+            selectedLoanType != null
+                ? 'Loading ${selectedLoanType!.loanType} vendors...'
+                : 'Loading vendors...',
             style: GoogleFonts.poppins(
               color: Colors.grey[600],
               fontSize: 16,
@@ -276,7 +294,7 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
           ),
           SizedBox(height: screenHeight * 0.02),
           Text(
-            'Failed to load vehicles',
+            'Failed to load vendors',
             style: GoogleFonts.poppins(
               fontSize: screenWidth * 0.045,
               fontWeight: FontWeight.w600,
@@ -294,14 +312,14 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
           ),
           SizedBox(height: screenHeight * 0.03),
           ElevatedButton.icon(
-            onPressed: _fetchVehicles,
+            onPressed: _fetchVendors,
             icon: const Icon(Icons.refresh),
             label: Text(
               'Retry',
               style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.royalBlue,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(screenWidth * 0.032),
@@ -323,13 +341,13 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
         children: [
           SizedBox(height: screenHeight * 0.05),
           Icon(
-            Icons.electric_car_outlined,
+            Icons.store_mall_directory_outlined,
             size: screenWidth * 0.2,
             color: Colors.grey,
           ),
           SizedBox(height: screenHeight * 0.02),
           Text(
-            'No vehicles available',
+            'No vendors available',
             style: GoogleFonts.poppins(
               fontSize: screenWidth * 0.045,
               fontWeight: FontWeight.w600,
@@ -338,9 +356,9 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
           ),
           SizedBox(height: screenHeight * 0.01),
           Text(
-            selectedVendor != null
-                ? 'No vehicles found for ${selectedVendor!.companyName}'
-                : 'Please contact the vendor for assistance',
+            selectedLoanType != null
+                ? 'No vendors found for ${selectedLoanType!.displayName}'
+                : 'Please contact support for assistance',
             style: GoogleFonts.poppins(
               fontSize: screenWidth * 0.035,
               color: Colors.grey[500],
@@ -353,26 +371,26 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
     );
   }
 
-  Widget _buildVehicleCard({
+  Widget _buildVendorCard({
     required BuildContext context,
-    required VehicleData vehicle,
+    required VendorData vendor,
     required VoidCallback onTap,
-    required bool isSelected,
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+
+    // Get color based on loan type
+    Color cardColor = vendor.loanType.loanType.toLowerCase() == 'ev'
+        ? Colors.green
+        : AppColors.royalBlue;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(screenWidth * 0.053),
-        border: Border.all(
-          color: isSelected ? Colors.green : Colors.grey[300]!,
-          width: isSelected ? 2 : 1,
-        ),
         boxShadow: [
           BoxShadow(
-            color: (isSelected ? Colors.green : Colors.grey).withOpacity(0.1),
+            color: cardColor.withOpacity(0.1),
             blurRadius: screenWidth * 0.053,
             offset: Offset(0, screenHeight * 0.01),
           ),
@@ -394,13 +412,15 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
                     Container(
                       padding: EdgeInsets.all(screenWidth * 0.032),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
+                        color: cardColor.withOpacity(0.1),
                         borderRadius:
                             BorderRadius.circular(screenWidth * 0.032),
                       ),
                       child: Icon(
-                        Icons.electric_car,
-                        color: Colors.green,
+                        vendor.loanType.loanType.toLowerCase() == 'ev'
+                            ? Icons.electric_car
+                            : Icons.diamond,
+                        color: cardColor,
                         size: screenWidth * 0.085,
                       ),
                     ),
@@ -410,50 +430,124 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            vehicle.vehicleName,
+                            vendor.companyName,
                             style: GoogleFonts.poppins(
                               fontSize: screenWidth * 0.048,
                               fontWeight: FontWeight.bold,
-                              color:
-                                  isSelected ? Colors.green : Colors.grey[800],
+                              color: cardColor,
                             ),
                           ),
                           SizedBox(height: screenHeight * 0.005),
-                          Text(
-                            'Model: ${vehicle.model}',
-                            style: GoogleFonts.poppins(
-                              fontSize: screenWidth * 0.037,
-                              color: Colors.grey[600],
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                vendor.user.name,
+                                style: GoogleFonts.poppins(
+                                  fontSize: screenWidth * 0.037,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              SizedBox(width: screenWidth * 0.021),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: screenWidth * 0.021,
+                                  vertical: screenHeight * 0.003,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: cardColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(
+                                      screenWidth * 0.016),
+                                ),
+                                child: Text(
+                                  vendor.loanType.loanType,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: screenWidth * 0.027,
+                                    color: cardColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    if (isSelected)
-                      Container(
-                        padding: EdgeInsets.all(screenWidth * 0.016),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.check,
-                          color: Colors.white,
-                          size: screenWidth * 0.048,
-                        ),
-                      )
-                    else
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.grey[400],
-                        size: screenWidth * 0.053,
-                      ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: cardColor,
+                      size: screenWidth * 0.053,
+                    ),
                   ],
                 ),
 
                 SizedBox(height: screenHeight * 0.025),
 
-                // Vehicle Details
+                // Contact Details
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on_outlined,
+                      color: Colors.grey[500],
+                      size: screenWidth * 0.053,
+                    ),
+                    SizedBox(width: screenWidth * 0.021),
+                    Expanded(
+                      child: Text(
+                        vendor.location,
+                        style: GoogleFonts.poppins(
+                          fontSize: screenWidth * 0.037,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: screenHeight * 0.015),
+
+                Row(
+                  children: [
+                    Icon(
+                      Icons.phone_outlined,
+                      color: Colors.grey[500],
+                      size: screenWidth * 0.053,
+                    ),
+                    SizedBox(width: screenWidth * 0.021),
+                    Text(
+                      vendor.user.mobile,
+                      style: GoogleFonts.poppins(
+                        fontSize: screenWidth * 0.037,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: screenHeight * 0.015),
+
+                Row(
+                  children: [
+                    Icon(
+                      Icons.email_outlined,
+                      color: Colors.grey[500],
+                      size: screenWidth * 0.053,
+                    ),
+                    SizedBox(width: screenWidth * 0.021),
+                    Expanded(
+                      child: Text(
+                        vendor.user.email,
+                        style: GoogleFonts.poppins(
+                          fontSize: screenWidth * 0.037,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: screenHeight * 0.025),
+
+                // Business Details
                 Container(
                   padding: EdgeInsets.all(screenWidth * 0.043),
                   decoration: BoxDecoration(
@@ -463,58 +557,45 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
                   child: Column(
                     children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Icon(
-                            Icons.confirmation_number_outlined,
-                            color: Colors.grey[500],
-                            size: screenWidth * 0.053,
-                          ),
-                          SizedBox(width: screenWidth * 0.021),
                           Text(
-                            'Registration:',
+                            'PAN Number:',
                             style: GoogleFonts.poppins(
-                              fontSize: screenWidth * 0.037,
+                              fontSize: screenWidth * 0.032,
                               color: Colors.grey[600],
                             ),
                           ),
-                          SizedBox(width: screenWidth * 0.021),
-                          Expanded(
-                            child: Text(
-                              vehicle.registrationNumber,
-                              style: GoogleFonts.poppins(
-                                fontSize: screenWidth * 0.037,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[800],
-                              ),
+                          Text(
+                            vendor.panNumber,
+                            style: GoogleFonts.poppins(
+                              fontSize: screenWidth * 0.032,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800],
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: screenHeight * 0.015),
+                      SizedBox(height: screenHeight * 0.01),
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Icon(
-                            Icons.category_outlined,
-                            color: Colors.grey[500],
-                            size: screenWidth * 0.053,
-                          ),
-                          SizedBox(width: screenWidth * 0.021),
                           Text(
-                            'Model:',
+                            'CIN Number:',
                             style: GoogleFonts.poppins(
-                              fontSize: screenWidth * 0.037,
+                              fontSize: screenWidth * 0.032,
                               color: Colors.grey[600],
                             ),
                           ),
-                          SizedBox(width: screenWidth * 0.021),
-                          Expanded(
+                          Flexible(
                             child: Text(
-                              vehicle.model,
+                              vendor.cinNumber,
                               style: GoogleFonts.poppins(
-                                fontSize: screenWidth * 0.037,
+                                fontSize: screenWidth * 0.032,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.grey[800],
                               ),
+                              textAlign: TextAlign.right,
                             ),
                           ),
                         ],
@@ -531,9 +612,7 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
                   height: screenHeight * 0.06,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: isSelected
-                          ? [Colors.green, Colors.green.withOpacity(0.8)]
-                          : [Colors.grey[400]!, Colors.grey[300]!],
+                      colors: [cardColor, cardColor.withOpacity(0.8)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -546,7 +625,7 @@ class _EVVehicleSelectionScreenState extends State<EVVehicleSelectionScreen> {
                       borderRadius: BorderRadius.circular(screenWidth * 0.032),
                       child: Center(
                         child: Text(
-                          isSelected ? 'Selected' : 'Select Vehicle',
+                          'Select Vendor',
                           style: GoogleFonts.poppins(
                             fontSize: screenWidth * 0.043,
                             fontWeight: FontWeight.w600,

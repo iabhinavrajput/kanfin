@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kifinserv/constants/app_colors.dart';
 import 'package:kifinserv/routes/app_routes.dart';
+import 'package:kifinserv/services/application_storage_service.dart';
+import 'package:kifinserv/models/loan_types_model.dart';
 
 class StartApplicationScreen extends StatelessWidget {
   const StartApplicationScreen({super.key});
@@ -20,7 +22,7 @@ class StartApplicationScreen extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             color: Colors.white,
-            fontSize: screenWidth * 0.048, // Responsive font size
+            fontSize: screenWidth * 0.048,
           ),
         ),
         centerTitle: true,
@@ -112,7 +114,7 @@ class StartApplicationScreen extends StatelessWidget {
                       'Minimal documentation'
                     ],
                     onTap: () {
-                      Get.toNamed(AppRoutes.GOLD_LOAN);
+                      _selectLoanType(LoanTypeData(id: 2, loanType: 'Gold'));
                     },
                   ),
 
@@ -134,7 +136,7 @@ class StartApplicationScreen extends StatelessWidget {
                       'Green incentives available'
                     ],
                     onTap: () {
-                      Get.toNamed(AppRoutes.EV_LOAN_VENDOR);
+                      _selectLoanType(LoanTypeData(id: 1, loanType: 'EV'));
                     },
                   ),
 
@@ -219,6 +221,52 @@ class StartApplicationScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _selectLoanType(LoanTypeData loanType) async {
+    try {
+      // Show loading
+      Get.dialog(
+        const Center(
+          child: CircularProgressIndicator(color: AppColors.royalBlue),
+        ),
+        barrierDismissible: false,
+      );
+
+      // Store selected loan type locally (no API call needed)
+      ApplicationStorageService.storeSelectedLoanType(loanType);
+
+      // Close loading dialog
+      Get.back();
+
+      // Show success message
+      Get.snackbar(
+        'Loan Type Selected',
+        '${loanType.displayName} has been selected',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.royalBlue,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+
+      // Wait a moment for the snackbar to show
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Navigate to vendor selection screen
+      Get.toNamed(AppRoutes.VENDOR_SELECTION);
+    } catch (e) {
+      // Close loading dialog
+      Get.back();
+
+      // Show error
+      Get.snackbar(
+        'Error',
+        e.toString().replaceFirst('Exception: ', ''),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   Widget _buildLoanCard({

@@ -8,4 +8,11 @@ class ApiConstants {
   static const String register = '$baseUrl/auth/register';
   static const String verifyRegistrationOtp = '$baseUrl/auth/verify-otp';
   static const String resendOtp = '$baseUrl/auth/resend-otp';
+
+  // Loan endpoints
+  static const String loanTypes = '$baseUrl/auth/loan-types';
+
+  // Vendor endpoints
+  static const String vendors = '$baseUrl/auth/vendor';
+  static const String vendorVehicles = '$baseUrl/auth/vendors';
 }

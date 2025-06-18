@@ -16,6 +16,7 @@ import 'package:kifinserv/screens/loans/terms_conditions_screen.dart';
 import 'package:kifinserv/screens/loans/gold_loan_screen.dart';
 import 'package:kifinserv/screens/login/login_binding.dart';
 import 'package:kifinserv/screens/login/login_signup_screen.dart';
+import 'package:kifinserv/screens/vendors/vendor_selection_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/splash/splash_binding.dart';
 
@@ -49,6 +50,10 @@ class AppPages {
     GetPage(
       name: AppRoutes.LOGIN_OTP_VERIFICATION,
       page: () => LoginOtpVerificationScreen(),
+    ),
+    GetPage(
+      name: AppRoutes.VENDOR_SELECTION,
+      page: () => const VendorSelectionScreen(),
     ),
     GetPage(
       name: AppRoutes.GOLD_LOAN,

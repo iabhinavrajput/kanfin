@@ -7,6 +7,7 @@ abstract class AppRoutes {
   static const LOGIN_OTP_VERIFICATION = '/login-otp-verification';
 
   // Loan Routes
+  static const VENDOR_SELECTION = '/vendor-selection';
   static const GOLD_LOAN = '/gold-loan';
   static const EV_LOAN_VENDOR = '/ev-loan-vendor';
   static const EV_VEHICLE_SELECTION = '/ev-vehicle-selection';

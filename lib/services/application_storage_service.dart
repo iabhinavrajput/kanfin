@@ -1,9 +1,12 @@
 import 'package:get_storage/get_storage.dart';
 import '../models/application_model.dart';
+import '../models/loan_types_model.dart';
+import '../models/vendor_model.dart';
+import '../models/vehicle_model.dart';
 
 class ApplicationStorageService {
   static const String _applicationsKey = 'loan_applications';
-  final GetStorage _box = GetStorage();
+  static final GetStorage _box = GetStorage();
 
   // Save a new application
   Future<void> saveApplication(LoanApplication application) async {
@@ -209,5 +212,106 @@ class ApplicationStorageService {
     for (final app in sampleApplications) {
       await saveApplication(app);
     }
+  }
+
+  // Loan Type Storage
+  static void storeSelectedLoanType(LoanTypeData loanType) {
+    _box.write('selectedLoanTypeId', loanType.id);
+    _box.write('selectedLoanType', loanType.loanType);
+    _box.write('selectedLoanTypeData', loanType.toJson());
+    print('📦 Stored Loan Type: ${loanType.loanType} (ID: ${loanType.id})');
+  }
+
+  static LoanTypeData? getSelectedLoanType() {
+    try {
+      final loanTypeData = _box.read('selectedLoanTypeData');
+      if (loanTypeData != null) {
+        return LoanTypeData.fromJson(Map<String, dynamic>.from(loanTypeData));
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error getting loan type: $e');
+      return null;
+    }
+  }
+
+  static int? getSelectedLoanTypeId() {
+    return _box.read('selectedLoanTypeId');
+  }
+
+  static String? getSelectedLoanTypeString() {
+    return _box.read('selectedLoanType');
+  }
+
+  // Vendor Storage
+  static void storeSelectedVendor(VendorData vendor) {
+    _box.write('selectedVendorId', vendor.id);
+    _box.write('selectedVendorData', vendor.toJson());
+    print('📦 Stored Vendor: ${vendor.companyName} (ID: ${vendor.id})');
+  }
+
+  static VendorData? getSelectedVendor() {
+    try {
+      final vendorData = _box.read('selectedVendorData');
+      if (vendorData != null) {
+        return VendorData.fromJson(Map<String, dynamic>.from(vendorData));
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error getting vendor: $e');
+      return null;
+    }
+  }
+
+  static int? getSelectedVendorId() {
+    return _box.read('selectedVendorId');
+  }
+
+  // Vehicle Storage
+  static void storeSelectedVehicle(VehicleData vehicle) {
+    _box.write('selectedVehicleId', vehicle.id);
+    _box.write('selectedVehicleData', vehicle.toJson());
+    print('📦 Stored Vehicle: ${vehicle.vehicleName} (ID: ${vehicle.id})');
+  }
+
+  static VehicleData? getSelectedVehicle() {
+    try {
+      final vehicleData = _box.read('selectedVehicleData');
+      if (vehicleData != null) {
+        return VehicleData.fromJson(Map<String, dynamic>.from(vehicleData));
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error getting vehicle: $e');
+      return null;
+    }
+  }
+
+  static int? getSelectedVehicleId() {
+    return _box.read('selectedVehicleId');
+  }
+
+  // Clear application data
+  static void clearApplicationData() {
+    _box.remove('selectedLoanTypeId');
+    _box.remove('selectedLoanType');
+    _box.remove('selectedLoanTypeData');
+    _box.remove('selectedVendorId');
+    _box.remove('selectedVendorData');
+    _box.remove('selectedVehicleId');
+    _box.remove('selectedVehicleData');
+    print('📦 Cleared application data');
+  }
+
+  // Get application summary
+  static Map<String, dynamic> getApplicationSummary() {
+    return {
+      'loanType': getSelectedLoanType(),
+      'vendor': getSelectedVendor(),
+      'vehicle': getSelectedVehicle(),
+      'loanTypeId': getSelectedLoanTypeId(),
+      'vendorId': getSelectedVendorId(),
+      'vehicleId': getSelectedVehicleId(),
+    };
   }
 }
