@@ -156,3 +156,90 @@ class LoanApplication {
     }
   }
 }
+
+class ApplicationRequest {
+  final int userId;
+  final int loanType;
+  final String confirmedLoanType;
+  final int vendorId;
+  final int? vehicleId; // Optional for Gold loans
+  final String name;
+  final String dob;
+  final String gender;
+  final String nationality;
+  final String community;
+  final String category;
+  final String education;
+  final String maritalStatus;
+  final int numOfDependents;
+  final String fatherName;
+  final String motherName;
+
+  ApplicationRequest({
+    required this.userId,
+    required this.loanType,
+    required this.confirmedLoanType,
+    required this.vendorId,
+    this.vehicleId,
+    required this.name,
+    required this.dob,
+    required this.gender,
+    required this.nationality,
+    required this.community,
+    required this.category,
+    required this.education,
+    required this.maritalStatus,
+    required this.numOfDependents,
+    required this.fatherName,
+    required this.motherName,
+  });
+
+  Map<String, dynamic> toJson() {
+    final json = {
+      'user_id': userId,
+      'loan_type': loanType,
+      'confirmed_loan_type': confirmedLoanType,
+      'vendor_id': vendorId,
+      'name': name,
+      'dob': dob,
+      'gender': gender,
+      'nationality': nationality,
+      'community': community,
+      'category': category,
+      'education': education,
+      'marital_status': maritalStatus,
+      'num_of_dependents': numOfDependents,
+      'father_name': fatherName,
+      'mother_name': motherName,
+    };
+
+    if (vehicleId != null) {
+      json['vehicle_id'] = vehicleId!;
+    }
+
+    return json;
+  }
+}
+
+class ApplicationResponse {
+  final bool success;
+  final String message;
+  final int applicationId;
+  final String currentStatus;
+
+  ApplicationResponse({
+    required this.success,
+    required this.message,
+    required this.applicationId,
+    required this.currentStatus,
+  });
+
+  factory ApplicationResponse.fromJson(Map<String, dynamic> json) {
+    return ApplicationResponse(
+      success: json['success'] ?? false,
+      message: json['message'] ?? '',
+      applicationId: json['applicationId'] ?? 0,
+      currentStatus: json['currentStatus'] ?? '',
+    );
+  }
+}

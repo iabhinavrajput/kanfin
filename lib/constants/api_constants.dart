@@ -15,4 +15,7 @@ class ApiConstants {
   // Vendor endpoints
   static const String vendors = '$baseUrl/auth/vendor';
   static const String vendorVehicles = '$baseUrl/auth/vendors';
+
+  // Application endpoints
+  static const String submitApplication = '$baseUrl/auth/submit-application';
 }
