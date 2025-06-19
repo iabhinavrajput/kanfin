@@ -10,6 +10,7 @@ import 'package:kifinserv/screens/home/start_application_screen.dart';
 import 'package:kifinserv/screens/loans/ev_loan_vendor_screen.dart';
 import 'package:kifinserv/screens/loans/ev_vehicle_selection_screen.dart';
 import 'package:kifinserv/screens/loans/user_details_form_screen.dart';
+import 'package:kifinserv/screens/loans/address_update_screen.dart';
 import 'package:kifinserv/screens/loans/document_upload_screen.dart';
 import 'package:kifinserv/screens/loans/reference_details_screen.dart';
 import 'package:kifinserv/screens/loans/terms_conditions_screen.dart';
@@ -70,6 +71,10 @@ class AppPages {
     GetPage(
       name: AppRoutes.USER_DETAILS_FORM,
       page: () => UserDetailsFormScreen(),
+    ),
+    GetPage(
+      name: AppRoutes.ADDRESS_UPDATE,
+      page: () => AddressUpdateScreen(),
     ),
     GetPage(
       name: AppRoutes.DOCUMENT_UPLOAD,

@@ -214,6 +214,16 @@ class ApplicationStorageService {
     }
   }
 
+  // Application ID Storage
+  static void storeApplicationId(int applicationId) {
+    _box.write('applicationId', applicationId);
+    print('📦 Stored Application ID: $applicationId');
+  }
+
+  static int? getApplicationId() {
+    return _box.read('applicationId');
+  }
+
   // Loan Type Storage
   static void storeSelectedLoanType(LoanTypeData loanType) {
     _box.write('selectedLoanTypeId', loanType.id);
@@ -300,6 +310,7 @@ class ApplicationStorageService {
     _box.remove('selectedVendorData');
     _box.remove('selectedVehicleId');
     _box.remove('selectedVehicleData');
+    _box.remove('applicationId');
     print('📦 Cleared application data');
   }
 
@@ -312,6 +323,7 @@ class ApplicationStorageService {
       'loanTypeId': getSelectedLoanTypeId(),
       'vendorId': getSelectedVendorId(),
       'vehicleId': getSelectedVehicleId(),
+      'applicationId': getApplicationId(),
     };
   }
 }

@@ -3,44 +3,31 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kifinserv/constants/app_colors.dart';
 import 'package:kifinserv/routes/app_routes.dart';
-import 'package:kifinserv/services/application_service.dart';
+import 'package:kifinserv/services/address_service.dart';
 import 'package:kifinserv/services/application_storage_service.dart';
-import 'package:kifinserv/models/application_model.dart';
-import 'package:kifinserv/models/loan_types_model.dart';
-import 'package:kifinserv/models/vendor_model.dart';
-import 'package:kifinserv/models/vehicle_model.dart';
-import 'package:get_storage/get_storage.dart';
+import 'package:kifinserv/models/address_model.dart';
 
-class UserDetailsFormScreen extends StatefulWidget {
-  const UserDetailsFormScreen({super.key});
+class AddressUpdateScreen extends StatefulWidget {
+  const AddressUpdateScreen({super.key});
 
   @override
-  State<UserDetailsFormScreen> createState() => _UserDetailsFormScreenState();
+  State<AddressUpdateScreen> createState() => _AddressUpdateScreenState();
 }
 
-class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
+class _AddressUpdateScreenState extends State<AddressUpdateScreen> {
   final _formKey = GlobalKey<FormState>();
-  final GetStorage _box = GetStorage();
 
   // Form controllers
-  final _nameController = TextEditingController();
-  final _dobController = TextEditingController();
-  final _nationalityController = TextEditingController(text: 'Indian');
-  final _communityController = TextEditingController();
-  final _educationController = TextEditingController();
-  final _numOfDependentsController = TextEditingController(text: '0');
-  final _fatherNameController = TextEditingController();
-  final _motherNameController = TextEditingController();
+  final _residentialAddressController = TextEditingController();
+  final _nearestLandmarkController = TextEditingController();
+  final _permanentAddressController = TextEditingController();
 
   // Selected values
-  String? selectedGender;
-  String? selectedCategory;
-  String? selectedMaritalStatus;
+  String? selectedResidentialOwnership;
+  String? selectedPersonWithDisability;
 
   // Application data
-  LoanTypeData? selectedLoanType;
-  VendorData? selectedVendor;
-  VehicleData? selectedVehicle;
+  int? applicationId;
 
   // Loading state
   bool isSubmitting = false;
@@ -52,71 +39,29 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
   }
 
   void _loadApplicationData() {
-    selectedLoanType = ApplicationStorageService.getSelectedLoanType();
-    selectedVendor = ApplicationStorageService.getSelectedVendor();
-    selectedVehicle = ApplicationStorageService.getSelectedVehicle();
+    applicationId = ApplicationStorageService.getApplicationId();
+    print('📋 Application ID: $applicationId');
 
-    print('📋 Loaded Application Data:');
-    print(
-        '📋 Loan Type: ${selectedLoanType?.loanType} (ID: ${selectedLoanType?.id})');
-    print(
-        '📋 Vendor: ${selectedVendor?.companyName} (ID: ${selectedVendor?.id})');
-    print(
-        '📋 Vehicle: ${selectedVehicle?.vehicleName} (ID: ${selectedVehicle?.id})');
-  }
-
-  Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime(1990),
-      firstDate: DateTime(1950),
-      lastDate:
-          DateTime.now().subtract(const Duration(days: 365 * 18)), // 18+ years
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.royalBlue,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _dobController.text =
-            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-      });
-    }
-  }
-
-  Future<void> _submitApplication() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (selectedLoanType == null || selectedVendor == null) {
+    if (applicationId == null) {
       Get.snackbar(
         'Error',
-        'Missing application data. Please restart the application process.',
+        'Application ID not found. Please restart the application process.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
+    }
+  }
+
+  Future<void> _updateAddress() async {
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Check if vehicle is required for EV loans
-    if (selectedLoanType!.loanType.toLowerCase() == 'ev' &&
-        selectedVehicle == null) {
+    if (applicationId == null) {
       Get.snackbar(
         'Error',
-        'Vehicle selection is required for EV loans.',
+        'Application ID not found. Please restart the application process.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
@@ -129,41 +74,22 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
         isSubmitting = true;
       });
 
-      // Get user ID from storage (assuming it's stored during login)
-      int? userId = _box.read('userId');
-      if (userId == null) {
-        throw Exception('User not found. Please login again.');
-      }
-
-      final request = ApplicationRequest(
-        userId: userId,
-        loanType: selectedLoanType!.id,
-        confirmedLoanType: selectedLoanType!.loanType,
-        vendorId: selectedVendor!.id,
-        vehicleId: selectedVehicle?.id, // Only for EV loans
-        name: _nameController.text.trim(),
-        dob: _dobController.text,
-        gender: selectedGender!.toLowerCase(),
-        nationality: _nationalityController.text.trim(),
-        community: _communityController.text.trim(),
-        category: selectedCategory!,
-        education: _educationController.text.trim(),
-        maritalStatus: selectedMaritalStatus!,
-        numOfDependents: int.parse(_numOfDependentsController.text),
-        fatherName: _fatherNameController.text.trim(),
-        motherName: _motherNameController.text.trim(),
+      final request = AddressUpdateRequest(
+        loanApplicationId: applicationId!,
+        residentialOwnership: selectedResidentialOwnership!,
+        residentialAddress: _residentialAddressController.text.trim(),
+        nearestLandmark: _nearestLandmarkController.text.trim(),
+        personWithDisability: selectedPersonWithDisability!.toLowerCase(),
+        permanentAddress: _permanentAddressController.text.trim(),
       );
 
-      final response = await ApplicationService.submitApplication(request);
-
-      // Store the application ID
-      ApplicationStorageService.storeApplicationId(response.applicationId);
+      final response = await AddressService.updateAddress(request);
 
       setState(() {
         isSubmitting = false;
       });
 
-      // Show success dialog and navigate to address update
+      // Show success dialog
       Get.dialog(
         AlertDialog(
           shape: RoundedRectangleBorder(
@@ -191,45 +117,46 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
                 response.message,
                 style: GoogleFonts.poppins(fontSize: 16),
               ),
-              SizedBox(height: 15),
-              Container(
-                padding: EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Application Details:',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+              if (response.updatedApplication != null) ...[
+                SizedBox(height: 15),
+                Container(
+                  padding: EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Updated Address Information:',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 8),
-                    Text('Application ID: ${response.applicationId}'),
-                    Text('Status: ${response.currentStatus}'),
-                  ],
+                      SizedBox(height: 8),
+                      Text(
+                          'Application ID: ${response.updatedApplication!.id}'),
+                      Text(
+                          'Ownership: ${response.updatedApplication!.residentialOwnership}'),
+                      Text(
+                          'Address: ${response.updatedApplication!.residentialAddress}'),
+                      Text(
+                          'Landmark: ${response.updatedApplication!.nearestLandmark}'),
+                    ],
+                  ),
                 ),
-              ),
-              SizedBox(height: 15),
-              Text(
-                'Next: Please provide your address information to continue.',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
-              ),
+              ],
             ],
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Get.back(); // Close dialog
-                Get.toNamed(
-                    AppRoutes.ADDRESS_UPDATE); // Navigate to address update
+                ApplicationStorageService
+                    .clearApplicationData(); // Clear stored data
+                Get.offAllNamed(AppRoutes.HOME); // Navigate to home
               },
               child: Text(
                 'Continue',
@@ -267,7 +194,7 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(
-          'Personal Details',
+          'Address Information',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
             color: Colors.white,
@@ -311,14 +238,14 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      Icons.person_outline,
+                      Icons.home_outlined,
                       size: screenWidth * 0.133,
                       color: Colors.white,
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.025),
                   Text(
-                    'Personal Information',
+                    'Address Details',
                     style: GoogleFonts.poppins(
                       fontSize: screenWidth * 0.064,
                       fontWeight: FontWeight.bold,
@@ -328,7 +255,7 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
                   ),
                   SizedBox(height: screenHeight * 0.01),
                   Text(
-                    'Please fill in your personal details to complete the application',
+                    'Please provide your residential and permanent address information',
                     style: GoogleFonts.poppins(
                       fontSize: screenWidth * 0.037,
                       color: Colors.white.withOpacity(0.9),
@@ -349,146 +276,54 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
                   children: [
                     SizedBox(height: screenHeight * 0.025),
 
-                    // Application Summary Card
-                    if (selectedLoanType != null || selectedVendor != null)
+                    // Application ID Info
+                    if (applicationId != null)
                       Container(
                         padding: EdgeInsets.all(screenWidth * 0.043),
                         decoration: BoxDecoration(
-                          color: Colors.blue[50],
+                          color: Colors.green[50],
                           borderRadius:
                               BorderRadius.circular(screenWidth * 0.032),
-                          border: Border.all(color: Colors.blue[100]!),
+                          border: Border.all(color: Colors.green[100]!),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
+                            Icon(Icons.info_outline, color: Colors.green),
+                            SizedBox(width: screenWidth * 0.021),
                             Text(
-                              'Application Summary',
+                              'Application ID: $applicationId',
                               style: GoogleFonts.poppins(
-                                fontSize: screenWidth * 0.043,
+                                fontSize: screenWidth * 0.037,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.royalBlue,
+                                color: Colors.green[700],
                               ),
                             ),
-                            SizedBox(height: screenHeight * 0.01),
-                            if (selectedLoanType != null)
-                              Text(
-                                  'Loan Type: ${selectedLoanType!.displayName}'),
-                            if (selectedVendor != null)
-                              Text('Vendor: ${selectedVendor!.companyName}'),
-                            if (selectedVehicle != null)
-                              Text('Vehicle: ${selectedVehicle!.vehicleName}'),
                           ],
                         ),
                       ),
 
                     SizedBox(height: screenHeight * 0.03),
 
-                    // Name Field
-                    _buildTextField(
-                      controller: _nameController,
-                      label: 'Full Name',
-                      icon: Icons.person,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Name is required';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    SizedBox(height: screenHeight * 0.025),
-
-                    // Date of Birth Field
-                    _buildTextField(
-                      controller: _dobController,
-                      label: 'Date of Birth',
-                      icon: Icons.calendar_today,
-                      readOnly: true,
-                      onTap: _selectDate,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Date of birth is required';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    SizedBox(height: screenHeight * 0.025),
-
-                    // Gender Dropdown
+                    // Residential Ownership Dropdown
                     _buildDropdownField(
-                      value: selectedGender,
-                      label: 'Gender',
-                      icon: Icons.people,
-                      items: ['Male', 'Female', 'Other'],
-                      onChanged: (value) {
-                        setState(() {
-                          selectedGender = value;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Gender is required';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    SizedBox(height: screenHeight * 0.025),
-
-                    // Nationality Field
-                    _buildTextField(
-                      controller: _nationalityController,
-                      label: 'Nationality',
-                      icon: Icons.flag,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Nationality is required';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    SizedBox(height: screenHeight * 0.025),
-
-                    // Community Field
-                    _buildTextField(
-                      controller: _communityController,
-                      label: 'Community',
-                      icon: Icons.group,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Community is required';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    SizedBox(height: screenHeight * 0.025),
-
-                    // Category Dropdown
-                    _buildDropdownField(
-                      value: selectedCategory,
-                      label: 'Category',
-                      icon: Icons.category,
+                      value: selectedResidentialOwnership,
+                      label: 'Residential Ownership',
+                      icon: Icons.home_work,
                       items: [
-                        'Salaried',
-                        'Self-Employed',
-                        'Business',
-                        'Farmer',
-                        'Student',
-                        'Retired',
+                        'Owned',
+                        'Rented',
+                        'Family Owned',
+                        'Company Provided',
                         'Other'
                       ],
                       onChanged: (value) {
                         setState(() {
-                          selectedCategory = value;
+                          selectedResidentialOwnership = value;
                         });
                       },
                       validator: (value) {
                         if (value == null) {
-                          return 'Category is required';
+                          return 'Residential ownership is required';
                         }
                         return null;
                       },
@@ -496,14 +331,15 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
 
                     SizedBox(height: screenHeight * 0.025),
 
-                    // Education Field
+                    // Residential Address Field
                     _buildTextField(
-                      controller: _educationController,
-                      label: 'Education',
-                      icon: Icons.school,
+                      controller: _residentialAddressController,
+                      label: 'Residential Address',
+                      icon: Icons.location_on,
+                      maxLines: 3,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Education is required';
+                          return 'Residential address is required';
                         }
                         return null;
                       },
@@ -511,20 +347,35 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
 
                     SizedBox(height: screenHeight * 0.025),
 
-                    // Marital Status Dropdown
+                    // Nearest Landmark Field
+                    _buildTextField(
+                      controller: _nearestLandmarkController,
+                      label: 'Nearest Landmark',
+                      icon: Icons.place,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Nearest landmark is required';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    SizedBox(height: screenHeight * 0.025),
+
+                    // Person with Disability Dropdown
                     _buildDropdownField(
-                      value: selectedMaritalStatus,
-                      label: 'Marital Status',
-                      icon: Icons.favorite,
-                      items: ['Single', 'Married', 'Divorced', 'Widowed'],
+                      value: selectedPersonWithDisability,
+                      label: 'Person with Disability',
+                      icon: Icons.accessible,
+                      items: ['No', 'Yes'],
                       onChanged: (value) {
                         setState(() {
-                          selectedMaritalStatus = value;
+                          selectedPersonWithDisability = value;
                         });
                       },
                       validator: (value) {
                         if (value == null) {
-                          return 'Marital status is required';
+                          return 'Please select an option';
                         }
                         return null;
                       },
@@ -532,18 +383,15 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
 
                     SizedBox(height: screenHeight * 0.025),
 
-                    // Number of Dependents Field
+                    // Permanent Address Field
                     _buildTextField(
-                      controller: _numOfDependentsController,
-                      label: 'Number of Dependents',
-                      icon: Icons.family_restroom,
-                      keyboardType: TextInputType.number,
+                      controller: _permanentAddressController,
+                      label: 'Permanent Address',
+                      icon: Icons.location_city,
+                      maxLines: 3,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Number of dependents is required';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Please enter a valid number';
+                          return 'Permanent address is required';
                         }
                         return null;
                       },
@@ -551,32 +399,32 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
 
                     SizedBox(height: screenHeight * 0.025),
 
-                    // Father's Name Field
-                    _buildTextField(
-                      controller: _fatherNameController,
-                      label: "Father's Name",
-                      icon: Icons.man,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return "Father's name is required";
-                        }
-                        return null;
+                    // Copy Residential Address Button
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _permanentAddressController.text =
+                              _residentialAddressController.text;
+                        });
                       },
-                    ),
-
-                    SizedBox(height: screenHeight * 0.025),
-
-                    // Mother's Name Field
-                    _buildTextField(
-                      controller: _motherNameController,
-                      label: "Mother's Name",
-                      icon: Icons.woman,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return "Mother's name is required";
-                        }
-                        return null;
-                      },
+                      icon: Icon(Icons.copy, size: screenWidth * 0.048),
+                      label: Text(
+                        'Copy from Residential Address',
+                        style:
+                            GoogleFonts.poppins(fontSize: screenWidth * 0.037),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.royalBlue,
+                        side: BorderSide(color: AppColors.royalBlue),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(screenWidth * 0.032),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.032,
+                          vertical: screenHeight * 0.015,
+                        ),
+                      ),
                     ),
 
                     SizedBox(height: screenHeight * 0.05),
@@ -599,7 +447,7 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: isSubmitting ? null : _submitApplication,
+                          onTap: isSubmitting ? null : _updateAddress,
                           borderRadius:
                               BorderRadius.circular(screenWidth * 0.032),
                           child: Center(
@@ -613,7 +461,7 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
                                     ),
                                   )
                                 : Text(
-                                    'Submit Application',
+                                    'Update Address',
                                     style: GoogleFonts.poppins(
                                       fontSize: screenWidth * 0.043,
                                       fontWeight: FontWeight.w600,
@@ -642,6 +490,7 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
     required IconData icon,
     String? Function(String?)? validator,
     TextInputType? keyboardType,
+    int maxLines = 1,
     bool readOnly = false,
     VoidCallback? onTap,
   }) {
@@ -653,6 +502,7 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
       keyboardType: keyboardType,
       readOnly: readOnly,
       onTap: onTap,
+      maxLines: maxLines,
       style: GoogleFonts.poppins(fontSize: screenWidth * 0.037),
       decoration: InputDecoration(
         labelText: label,
@@ -738,14 +588,9 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _dobController.dispose();
-    _nationalityController.dispose();
-    _communityController.dispose();
-    _educationController.dispose();
-    _numOfDependentsController.dispose();
-    _fatherNameController.dispose();
-    _motherNameController.dispose();
+    _residentialAddressController.dispose();
+    _nearestLandmarkController.dispose();
+    _permanentAddressController.dispose();
     super.dispose();
   }
 }

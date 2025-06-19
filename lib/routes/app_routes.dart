@@ -12,6 +12,7 @@ abstract class AppRoutes {
   static const EV_LOAN_VENDOR = '/ev-loan-vendor';
   static const EV_VEHICLE_SELECTION = '/ev-vehicle-selection';
   static const USER_DETAILS_FORM = '/user-details-form';
+  static const ADDRESS_UPDATE = '/address-update';
   static const DOCUMENT_UPLOAD = '/document-upload';
   static const REFERENCE_DETAILS = '/reference-details';
   static const TERMS_CONDITIONS = '/terms-conditions';

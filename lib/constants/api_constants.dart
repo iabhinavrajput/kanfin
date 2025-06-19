@@ -18,4 +18,5 @@ class ApiConstants {
 
   // Application endpoints
   static const String submitApplication = '$baseUrl/auth/submit-application';
+  static const String updateAddress = '$baseUrl/auth/update-address';
 }
