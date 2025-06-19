@@ -164,15 +164,23 @@ class _AddressUpdateScreenState extends State<AddressUpdateScreen> {
               onPressed: () {
                 Get.back(); // Close dialog
 
+                // Get selected data
+                final selectedLoanType =
+                    ApplicationStorageService.getSelectedLoanType();
+                final selectedVendor =
+                    ApplicationStorageService.getSelectedVendor();
+                final selectedVehicle =
+                    ApplicationStorageService.getSelectedVehicle();
+
                 // Pass application data to Digio verification
                 Get.toNamed(
                   AppRoutes.DIGIO_VERIFICATION,
                   arguments: {
                     'applicationId': applicationId,
                     'updatedApplication': response.updatedApplication,
-                    'loanType': ApplicationStorageService.getSelectedLoanType(),
-                    'vendor': ApplicationStorageService.getSelectedVendor(),
-                    'vehicle': ApplicationStorageService.getSelectedVehicle(),
+                    'loanType': selectedLoanType?.loanType ?? 'Unknown',
+                    'vendor': selectedVendor?.companyName ?? 'Unknown',
+                    'vehicle': selectedVehicle?.vehicleName ?? null,
                   },
                 );
               },
