@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kifinserv/constants/app_colors.dart';
+import 'package:kifinserv/routes/app_routes.dart';
 
 class DigioVerificationScreen extends StatefulWidget {
   const DigioVerificationScreen({super.key});
@@ -255,14 +256,22 @@ class _DigioVerificationScreenState extends State<DigioVerificationScreen> {
                       child: InkWell(
                         onTap: (isPanVerified && isAadhaarVerified)
                             ? () {
+                                // Get current arguments
+                                final arguments = Get.arguments ?? {};
+
                                 Get.snackbar(
-                                  'Success',
-                                  'Verification completed! Your application is being processed.',
+                                  'Verification Complete',
+                                  'Document verification completed successfully!',
                                   snackPosition: SnackPosition.BOTTOM,
                                   backgroundColor: Colors.green,
                                   colorText: Colors.white,
                                 );
-                                Get.offAllNamed('/home');
+
+                                // Navigate to Reference Details with application data
+                                Get.toNamed(
+                                  AppRoutes.REFERENCE_DETAILS,
+                                  arguments: arguments,
+                                );
                               }
                             : null,
                         borderRadius:

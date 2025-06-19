@@ -6,7 +6,6 @@ import 'package:kifinserv/models/application_model.dart';
 import 'package:kifinserv/routes/app_routes.dart';
 import 'package:kifinserv/services/application_storage_service.dart';
 
-
 class TermsConditionsScreen extends StatefulWidget {
   const TermsConditionsScreen({super.key});
 
@@ -416,15 +415,8 @@ class _TermsConditionsScreenState extends State<TermsConditionsScreen> {
     final storageService = ApplicationStorageService();
     await storageService.saveApplication(application);
 
-    final finalData = {
-      ...applicationData,
-      'applicationId': applicationId,
-      'termsAccepted': true,
-      'privacyAccepted': true,
-      'declarationAccepted': true,
-      'submissionDate': DateTime.now().toIso8601String(),
-      'status': 'submitted',
-    };
+    // Clear temporary application data
+    ApplicationStorageService.clearApplicationData();
 
     Get.snackbar(
       'Success',
@@ -435,6 +427,7 @@ class _TermsConditionsScreenState extends State<TermsConditionsScreen> {
       duration: const Duration(seconds: 4),
     );
 
-    Get.toNamed(AppRoutes.DIGIO_VERIFICATION, arguments: finalData);
+    // Navigate to home screen (application process complete)
+    Get.offAllNamed(AppRoutes.HOME);
   }
 }
