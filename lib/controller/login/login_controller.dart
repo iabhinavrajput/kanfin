@@ -4,6 +4,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:kifinserv/routes/app_routes.dart';
 import '../../models/auth_models.dart';
 import '../../services/auth_service.dart';
+import '../../services/user_storage_service.dart';
 
 class LoginController extends GetxController {
   final emailController = TextEditingController();
@@ -70,10 +71,20 @@ class LoginController extends GetxController {
 
       final response = await AuthService.verifyLoginOtp(request);
 
-      // Store auth token and login status
-      box.write('authToken', response.token);
-      box.write('isLoggedIn', true);
-      box.write('userEmail', email);
+      // The AuthService.verifyLoginOtp already stores the user data
+      // So we don't need to manually store it again
+      // Just verify that the data was stored correctly
+      final storedUserId = UserStorageService.getUserId();
+      final storedUserData = UserStorageService.getUserData();
+
+      print('📋 Login Success - Stored User Data:');
+      print('📋 User ID: $storedUserId');
+      print('📋 User Data: ${storedUserData?.toJson()}');
+      print('📋 Token: ${response.token.substring(0, 20)}...');
+
+      if (storedUserId == null) {
+        throw Exception('Failed to store user data. Please try again.');
+      }
 
       Get.snackbar('Success', response.message);
       Get.offAllNamed(AppRoutes.HOME);

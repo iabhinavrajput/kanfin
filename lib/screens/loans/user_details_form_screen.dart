@@ -10,6 +10,7 @@ import 'package:kifinserv/models/loan_types_model.dart';
 import 'package:kifinserv/models/vendor_model.dart';
 import 'package:kifinserv/models/vehicle_model.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:kifinserv/services/user_storage_service.dart';
 
 class UserDetailsFormScreen extends StatefulWidget {
   const UserDetailsFormScreen({super.key});
@@ -49,6 +50,7 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
   void initState() {
     super.initState();
     _loadApplicationData();
+    _prefillUserData();
   }
 
   void _loadApplicationData() {
@@ -63,6 +65,15 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
         '📋 Vendor: ${selectedVendor?.companyName} (ID: ${selectedVendor?.id})');
     print(
         '📋 Vehicle: ${selectedVehicle?.vehicleName} (ID: ${selectedVehicle?.id})');
+  }
+
+  void _prefillUserData() {
+    // Pre-fill form with user data from storage
+    final user = UserStorageService.getUserData();
+    if (user != null) {
+      _nameController.text = user.name;
+      print('📋 Pre-filled user name: ${user.name}');
+    }
   }
 
   Future<void> _selectDate() async {
@@ -96,6 +107,9 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
   }
 
   Future<void> _submitApplication() async {
+    // Debug: Check user data before proceeding
+    _debugUserData();
+
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -129,8 +143,8 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
         isSubmitting = true;
       });
 
-      // Get user ID from storage (assuming it's stored during login)
-      int? userId = _box.read('userId');
+      // Get user ID from UserStorageService
+      int? userId = UserStorageService.getUserId();
       if (userId == null) {
         throw Exception('User not found. Please login again.');
       }
@@ -254,6 +268,69 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
+      );
+    }
+  }
+
+  void _debugUserData() {
+    print('🔍 DEBUG: Checking user data before submission...');
+
+    // Check UserStorageService
+    final userId = UserStorageService.getUserId();
+    final userData = UserStorageService.getUserData();
+    final authToken = UserStorageService.getAuthToken();
+
+    print('🔍 UserStorageService.getUserId(): $userId');
+    print('🔍 UserStorageService.getUserData(): ${userData?.toJson()}');
+    print(
+        '🔍 UserStorageService.getAuthToken(): ${authToken?.substring(0, 20)}...');
+    print(
+        '🔍 UserStorageService.isLoggedIn(): ${UserStorageService.isLoggedIn()}');
+
+    // Check GetStorage directly
+    final box = GetStorage();
+    final directUserId = box.read('userId');
+    final directUserData = box.read('userData');
+    final directAuthToken = box.read('authToken');
+
+    print('🔍 Direct GetStorage userId: $directUserId');
+    print('🔍 Direct GetStorage userData: $directUserData');
+    print(
+        '🔍 Direct GetStorage authToken: ${directAuthToken?.substring(0, 20)}...');
+
+    // Check application data
+    print(
+        '🔍 Application Summary: ${ApplicationStorageService.getApplicationSummary()}');
+
+    if (userId == null) {
+      print('❌ ERROR: User ID is null!');
+      print('❌ This will cause the submission to fail.');
+
+      // Show detailed error dialog
+      Get.dialog(
+        AlertDialog(
+          title: Text('Debug: User Data Missing'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('User ID: ${userId ?? "NULL"}'),
+              Text('User Data: ${userData?.name ?? "NULL"}'),
+              Text(
+                  'Auth Token: ${authToken?.isNotEmpty == true ? "Present" : "NULL"}'),
+              Text('Logged In: ${UserStorageService.isLoggedIn()}'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Get.back();
+                Get.offAllNamed(AppRoutes.LOGIN);
+              },
+              child: Text('Go to Login'),
+            ),
+          ],
+        ),
       );
     }
   }

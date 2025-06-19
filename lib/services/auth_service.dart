@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../models/auth_models.dart';
+import 'user_storage_service.dart';
 
 class AuthService {
   // Registration methods
@@ -121,6 +122,9 @@ class AuthService {
   // Login methods
   static Future<LoginResponse> login(LoginRequest request) async {
     try {
+      print('📤 Login Request to: ${ApiConstants.login}');
+      print('📤 Request Body: ${json.encode(request.toJson())}');
+
       final response = await http
           .post(
             Uri.parse(ApiConstants.login),
@@ -131,6 +135,9 @@ class AuthService {
             body: json.encode(request.toJson()),
           )
           .timeout(const Duration(seconds: 30));
+
+      print('📥 Login Response Status: ${response.statusCode}');
+      print('📥 Login Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         return LoginResponse.fromJson(json.decode(response.body));
@@ -149,6 +156,9 @@ class AuthService {
   static Future<VerifyLoginOtpResponse> verifyLoginOtp(
       VerifyLoginOtpRequest request) async {
     try {
+      print('📤 Login OTP Verification Request to: ${ApiConstants.verifyOtp}');
+      print('📤 Request Body: ${json.encode(request.toJson())}');
+
       final response = await http
           .post(
             Uri.parse(ApiConstants.verifyOtp),
@@ -160,8 +170,18 @@ class AuthService {
           )
           .timeout(const Duration(seconds: 30));
 
+      print('📥 Login OTP Response Status: ${response.statusCode}');
+      print('📥 Login OTP Response Body: ${response.body}');
+
       if (response.statusCode == 200) {
-        return VerifyLoginOtpResponse.fromJson(json.decode(response.body));
+        final loginResponse =
+            VerifyLoginOtpResponse.fromJson(json.decode(response.body));
+
+        // Store user data and token
+        UserStorageService.storeUserData(
+            loginResponse.user, loginResponse.token);
+
+        return loginResponse;
       } else {
         final errorData = json.decode(response.body);
         throw Exception(errorData['message'] ?? 'OTP verification failed');
@@ -172,5 +192,27 @@ class AuthService {
       }
       throw Exception('Network error: $e');
     }
+  }
+
+  // Logout method
+  static Future<void> logout() async {
+    try {
+      // Clear stored user data
+      UserStorageService.clearUserData();
+      print('📤 User logged out successfully');
+    } catch (e) {
+      print('❌ Logout Error: $e');
+      throw Exception('Failed to logout');
+    }
+  }
+
+  // Check if user is logged in
+  static bool isLoggedIn() {
+    return UserStorageService.isLoggedIn();
+  }
+
+  // Get current user
+  static UserData? getCurrentUser() {
+    return UserStorageService.getUserData();
   }
 }

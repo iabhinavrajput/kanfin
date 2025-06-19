@@ -3,6 +3,7 @@ import '../models/application_model.dart';
 import '../models/loan_types_model.dart';
 import '../models/vendor_model.dart';
 import '../models/vehicle_model.dart';
+import 'user_storage_service.dart';
 
 class ApplicationStorageService {
   static const String _applicationsKey = 'loan_applications';
@@ -324,6 +325,8 @@ class ApplicationStorageService {
       'vendorId': getSelectedVendorId(),
       'vehicleId': getSelectedVehicleId(),
       'applicationId': getApplicationId(),
+      'user': UserStorageService.getUserData(),
+      'userId': UserStorageService.getUserId(),
     };
   }
 }

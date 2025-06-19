@@ -102,17 +102,64 @@ class VerifyLoginOtpRequest {
 class VerifyLoginOtpResponse {
   final String message;
   final String token;
+  final UserData user;
 
   VerifyLoginOtpResponse({
     required this.message,
     required this.token,
+    required this.user,
   });
 
   factory VerifyLoginOtpResponse.fromJson(Map<String, dynamic> json) {
     return VerifyLoginOtpResponse(
-      message: json['message'],
-      token: json['token'],
+      message: json['message'] ?? '',
+      token: json['token'] ?? '',
+      user: UserData.fromJson(json['user'] ?? {}),
     );
+  }
+}
+
+class UserData {
+  final int id;
+  final String name;
+  final String email;
+  final String role;
+  final bool otpVerified;
+  final String createdAt;
+  final String updatedAt;
+
+  UserData({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.role,
+    required this.otpVerified,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory UserData.fromJson(Map<String, dynamic> json) {
+    return UserData(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      email: json['email'] ?? '',
+      role: json['role'] ?? '',
+      otpVerified: json['otp_verified'] ?? false,
+      createdAt: json['createdAt'] ?? '',
+      updatedAt: json['updatedAt'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'role': role,
+      'otp_verified': otpVerified,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+    };
   }
 }
 
