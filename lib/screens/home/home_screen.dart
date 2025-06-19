@@ -7,6 +7,8 @@ import 'package:kifinserv/controller/home/home_controller.dart';
 import 'widgets/home_tab.dart';
 import 'widgets/status_tab.dart';
 import 'widgets/profile_tab.dart';
+import 'package:kifinserv/services/user_storage_service.dart';
+import 'package:kifinserv/routes/app_routes.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -49,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.white, size: screenWidth * 0.064),
                   onSelected: (value) {
                     if (value == 'logout') {
-                      homeController.logout();
+                      logout();
                     } else if (value == 'profile') {
                       _showUserProfile();
                     } else if (value == 'token_info') {
@@ -253,6 +255,40 @@ class _HomeScreenState extends State<HomeScreen> {
               value,
               style: GoogleFonts.poppins(fontSize: 14.sp),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void logout() {
+    Get.dialog(
+      AlertDialog(
+        title: Text('Logout'),
+        content: Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+
+              // Clear user data
+              UserStorageService.clearUserData();
+
+              // Navigate to login
+              Get.offAllNamed(AppRoutes.LOGIN);
+
+              Get.snackbar(
+                'Logged Out',
+                'You have been successfully logged out',
+                backgroundColor: Colors.orange.withOpacity(0.8),
+                colorText: Colors.white,
+              );
+            },
+            child: Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

@@ -71,22 +71,33 @@ class LoginController extends GetxController {
 
       final response = await AuthService.verifyLoginOtp(request);
 
-      // The AuthService.verifyLoginOtp already stores the user data
-      // So we don't need to manually store it again
-      // Just verify that the data was stored correctly
+      // Store user data using UserStorageService
+      UserStorageService.storeUserData(response.user, response.token);
+
+      // Verify storage worked
       final storedUserId = UserStorageService.getUserId();
-      final storedUserData = UserStorageService.getUserData();
+      final isLoggedIn = UserStorageService.isLoggedIn();
 
-      print('📋 Login Success - Stored User Data:');
-      print('📋 User ID: $storedUserId');
-      print('📋 User Data: ${storedUserData?.toJson()}');
-      print('📋 Token: ${response.token.substring(0, 20)}...');
+      print('📋 Login Success Verification:');
+      print('📋 Stored User ID: $storedUserId');
+      print('📋 Is Logged In: $isLoggedIn');
+      print('📋 User Data: ${UserStorageService.getUserData()?.toJson()}');
 
-      if (storedUserId == null) {
-        throw Exception('Failed to store user data. Please try again.');
+      if (!isLoggedIn || storedUserId == null) {
+        throw Exception(
+            'Failed to store user data properly. Please try again.');
       }
 
-      Get.snackbar('Success', response.message);
+      // Clear form data
+      clearFields();
+
+      Get.snackbar(
+        'Success',
+        'Welcome back ${response.user.name}!',
+        backgroundColor: Colors.green.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+
       Get.offAllNamed(AppRoutes.HOME);
     } catch (e) {
       Get.snackbar('Error', e.toString().replaceAll('Exception: ', ''));

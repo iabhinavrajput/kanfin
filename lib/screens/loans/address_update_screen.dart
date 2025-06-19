@@ -148,18 +148,36 @@ class _AddressUpdateScreenState extends State<AddressUpdateScreen> {
                   ),
                 ),
               ],
+              SizedBox(height: 15),
+              Text(
+                'Next: Please complete the Digio verification to finalize your application.',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Get.back(); // Close dialog
-                ApplicationStorageService
-                    .clearApplicationData(); // Clear stored data
-                Get.offAllNamed(AppRoutes.HOME); // Navigate to home
+
+                // Pass application data to Digio verification
+                Get.toNamed(
+                  AppRoutes.DIGIO_VERIFICATION,
+                  arguments: {
+                    'applicationId': applicationId,
+                    'updatedApplication': response.updatedApplication,
+                    'loanType': ApplicationStorageService.getSelectedLoanType(),
+                    'vendor': ApplicationStorageService.getSelectedVendor(),
+                    'vehicle': ApplicationStorageService.getSelectedVehicle(),
+                  },
+                );
               },
               child: Text(
-                'Continue',
+                'Continue to Verification',
                 style: GoogleFonts.poppins(
                   color: AppColors.royalBlue,
                   fontWeight: FontWeight.w600,
