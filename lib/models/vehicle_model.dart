@@ -1,20 +1,26 @@
 class VehicleResponse {
   final String message;
   final List<VehicleData> data;
+  final Map<String, dynamic>? vendor;
+  final int? total;
 
   VehicleResponse({
     required this.message,
     required this.data,
+    this.vendor,
+    this.total,
   });
 
   factory VehicleResponse.fromJson(Map<String, dynamic> json) {
     return VehicleResponse(
       message: json['message'] ?? '',
-      data: json['data'] != null
-          ? (json['data'] as List)
+      data: json['vehicles'] != null
+          ? (json['vehicles'] as List)
               .map((item) => VehicleData.fromJson(item))
               .toList()
           : [],
+      vendor: json['vendor'],
+      total: json['total'],
     );
   }
 }
