@@ -19,4 +19,7 @@ class ApiConstants {
   // Application endpoints
   static const String submitApplication = '$baseUrl/auth/submit-application';
   static const String updateAddress = '$baseUrl/auth/update-address';
+
+  // User statistics endpoints
+  static const String userCounts = '$baseUrl/auth/user-counts';
 }

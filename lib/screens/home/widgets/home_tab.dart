@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kifinserv/models/user_counts_model.dart';
 import 'package:kifinserv/routes/app_routes.dart';
 import 'package:kifinserv/constants/app_colors.dart';
 import 'package:kifinserv/controller/home/home_controller.dart';
@@ -77,47 +78,92 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final applications = box.read('applications') ?? [];
 
-    // Calculate statistics
-    final totalApplications = applications.length;
-    final pendingApplications =
-        applications.where((app) => app['status'] == 'Submitted').length;
-    final approvedApplications =
-        applications.where((app) => app['status'] == 'Approved').length;
-    final evLoans =
-        applications.where((app) => app['loanType'] == 'EV Loan').length;
-    final goldLoans =
-        applications.where((app) => app['loanType'] == 'Gold Loan').length;
+    return Obx(() {
+      // Get real-time data from API
+      final applicationStats = homeController.getApplicationStats();
+      final totalApplications = applicationStats['total'] ?? 0;
+      final pendingApplications = applicationStats['pending'] ?? 0;
+      final approvedApplications = applicationStats['approved'] ?? 0;
+      final evLoans = applicationStats['evLoans'] ?? 0;
+      final goldLoans = applicationStats['goldLoans'] ?? 0;
+      final applications =
+          homeController.userCountsData.value?.applications ?? [];
+      final isLoading = homeController.isLoadingApplications.value;
+      final hasError = homeController.applicationError.value.isNotEmpty;
 
-    Widget homeContent = SingleChildScrollView(
-      child: Column(
-        children: [
-          // Enhanced Welcome Header with user info and time greeting
-          _buildWelcomeHeader(screenWidth, screenHeight),
+      Widget homeContent = RefreshIndicator(
+        onRefresh: () => homeController.fetchUserApplications(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // Enhanced Welcome Header with user info and time greeting
+              _buildWelcomeHeader(screenWidth, screenHeight),
 
-          // Statistics Cards Section
-          _buildMainContent(
-            totalApplications,
-            pendingApplications,
-            approvedApplications,
-            evLoans,
-            goldLoans,
-            applications,
+              // Show loading or error state
+              if (isLoading)
+                Container(
+                  padding: EdgeInsets.all(horizontalPadding),
+                  child: const CircularProgressIndicator(),
+                )
+              else if (hasError)
+                Container(
+                  padding: EdgeInsets.all(horizontalPadding),
+                  child: Column(
+                    children: [
+                      Icon(Icons.error_outline, size: 48.w, color: Colors.red),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Failed to load applications',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        homeController.applicationError.value,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.sp,
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 16.h),
+                      ElevatedButton(
+                        onPressed: () => homeController.fetchUserApplications(),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                // Statistics Cards Section
+                _buildMainContent(
+                  totalApplications,
+                  pendingApplications,
+                  approvedApplications,
+                  evLoans,
+                  goldLoans,
+                  applications,
+                ),
+            ],
           ),
-        ],
-      ),
-    );
-
-    // Only apply fade animation if it's initialized
-    if (_fadeAnimation != null) {
-      return FadeTransition(
-        opacity: _fadeAnimation!,
-        child: homeContent,
+        ),
       );
-    } else {
-      return homeContent;
-    }
+
+      // Only apply fade animation if it's initialized
+      if (_fadeAnimation != null) {
+        return FadeTransition(
+          opacity: _fadeAnimation!,
+          child: homeContent,
+        );
+      } else {
+        return homeContent;
+      }
+    });
   }
 
   Widget _buildWelcomeHeader(double screenWidth, double screenHeight) {
@@ -233,7 +279,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     int approvedApplications,
     int evLoans,
     int goldLoans,
-    List applications,
+    List<ApplicationData> applications,
   ) {
     return Padding(
       padding: EdgeInsets.all(horizontalPadding),
@@ -565,7 +611,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildRecentActivitySection(List applications) {
+    Widget _buildRecentActivitySection(List<ApplicationData> applications) {
     final recentApps = applications.take(isTablet ? 5 : 3).toList();
 
     return Column(
@@ -593,10 +639,93 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
         SizedBox(height: cardSpacing * 0.75),
         ...recentApps.map((app) => Padding(
               padding: EdgeInsets.only(bottom: cardSpacing * 0.75),
-              child: SharedWidgets.buildRecentActivityItem(app),
+              child: _buildRecentActivityItem(app),
             )),
       ],
     );
+  }
+
+  Widget _buildRecentActivityItem(ApplicationData application) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8.r,
+            offset: Offset(0, 2.h),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  application.loanTypeName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(application.status).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Text(
+                  application.statusDisplayName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: _getStatusColor(application.status),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Application ID: ${application.id}',
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              color: Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            'Vendor: ${application.vendor.companyName}',
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Colors.orange;
+      case 'approved':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'disbursed':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _buildMainCTAButton() {

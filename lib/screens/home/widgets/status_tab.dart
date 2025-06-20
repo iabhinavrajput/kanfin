@@ -3,9 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kifinserv/constants/app_colors.dart';
-import 'package:kifinserv/models/application_model.dart';
+import 'package:kifinserv/models/user_counts_model.dart';
 import 'package:kifinserv/routes/app_routes.dart';
-import 'package:kifinserv/services/application_storage_service.dart';
+import 'package:kifinserv/services/application_service.dart';
 
 class StatusTab extends StatefulWidget {
   final Function(int) onTabChange;
@@ -17,8 +17,7 @@ class StatusTab extends StatefulWidget {
 }
 
 class _StatusTabState extends State<StatusTab> {
-  final ApplicationStorageService _storageService = ApplicationStorageService();
-  List<LoanApplication> applications = [];
+  UserCountsResponse? userCountsResponse;
   bool isLoading = true;
 
   @override
@@ -30,9 +29,9 @@ class _StatusTabState extends State<StatusTab> {
   Future<void> _loadApplications() async {
     setState(() => isLoading = true);
     try {
-      final apps = await _storageService.getAllApplications();
+      final response = await ApplicationService.getUserCounts();
       setState(() {
-        applications = apps;
+        userCountsResponse = response;
         isLoading = false;
       });
     } catch (e) {
@@ -91,7 +90,9 @@ class _StatusTabState extends State<StatusTab> {
                 SizedBox(height: 20.h),
 
                 // Quick Stats
-                if (!isLoading && applications.isNotEmpty) ...[
+                if (!isLoading &&
+                    userCountsResponse != null &&
+                    userCountsResponse!.applications.isNotEmpty) ...[
                   Container(
                     padding: EdgeInsets.all(16.w),
                     decoration: BoxDecoration(
@@ -102,22 +103,16 @@ class _StatusTabState extends State<StatusTab> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _buildQuickStat(
-                            'Total', applications.length, Icons.apps),
+                            'Total',
+                            userCountsResponse!.pagination.totalApplications,
+                            Icons.apps),
                         _buildQuickStat(
                             'Pending',
-                            applications
-                                .where((app) =>
-                                    app.status == 'submitted' ||
-                                    app.status == 'under_review')
-                                .length,
+                            userCountsResponse!.statusCounts.pending,
                             Icons.hourglass_empty),
                         _buildQuickStat(
                             'Approved',
-                            applications
-                                .where((app) =>
-                                    app.status == 'approved' ||
-                                    app.status == 'disbursed')
-                                .length,
+                            userCountsResponse!.statusCounts.totalApproved,
                             Icons.check_circle),
                       ],
                     ),
@@ -131,7 +126,8 @@ class _StatusTabState extends State<StatusTab> {
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : applications.isEmpty
+                : userCountsResponse == null ||
+                        userCountsResponse!.applications.isEmpty
                     ? _buildEmptyState()
                     : Column(
                         children: [
@@ -166,11 +162,13 @@ class _StatusTabState extends State<StatusTab> {
                           Expanded(
                             child: ListView.builder(
                               padding: EdgeInsets.symmetric(horizontal: 16.w),
-                              itemCount: applications.length > 3
-                                  ? 3
-                                  : applications.length,
+                              itemCount:
+                                  userCountsResponse!.applications.length > 3
+                                      ? 3
+                                      : userCountsResponse!.applications.length,
                               itemBuilder: (context, index) {
-                                final application = applications[index];
+                                final application =
+                                    userCountsResponse!.applications[index];
                                 return _buildApplicationCard(application);
                               },
                             ),
@@ -259,13 +257,16 @@ class _StatusTabState extends State<StatusTab> {
     );
   }
 
-  Widget _buildApplicationCard(LoanApplication application) {
+  Widget _buildApplicationCard(ApplicationData application) {
+    Color statusColor = _getStatusColor(application.status);
+    IconData statusIcon = _getStatusIcon(application.status);
+
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: application.statusColor.withOpacity(0.3)),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
@@ -279,17 +280,17 @@ class _StatusTabState extends State<StatusTab> {
         leading: Container(
           padding: EdgeInsets.all(8.w),
           decoration: BoxDecoration(
-            color: application.statusColor.withOpacity(0.1),
+            color: statusColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12.r),
           ),
           child: Icon(
-            application.statusIcon,
-            color: application.statusColor,
+            statusIcon,
+            color: statusColor,
             size: 24.w,
           ),
         ),
         title: Text(
-          application.loanType,
+          application.loanTypeName,
           style: GoogleFonts.poppins(
             fontSize: 16.sp,
             fontWeight: FontWeight.w600,
@@ -308,10 +309,18 @@ class _StatusTabState extends State<StatusTab> {
               ),
             ),
             SizedBox(height: 4.h),
+            Text(
+              'Vendor: ${application.vendor.companyName}',
+              style: GoogleFonts.poppins(
+                fontSize: 11.sp,
+                color: Colors.grey[600],
+              ),
+            ),
+            SizedBox(height: 4.h),
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
               decoration: BoxDecoration(
-                color: application.statusColor.withOpacity(0.1),
+                color: statusColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8.r),
               ),
               child: Text(
@@ -319,7 +328,7 @@ class _StatusTabState extends State<StatusTab> {
                 style: GoogleFonts.poppins(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w600,
-                  color: application.statusColor,
+                  color: statusColor,
                 ),
               ),
             ),
@@ -333,6 +342,36 @@ class _StatusTabState extends State<StatusTab> {
         onTap: () => Get.toNamed(AppRoutes.TRACK_APPLICATIONS),
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Colors.orange;
+      case 'approved':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'disbursed':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Icons.hourglass_empty;
+      case 'approved':
+        return Icons.check_circle;
+      case 'rejected':
+        return Icons.cancel;
+      case 'disbursed':
+        return Icons.account_balance;
+      default:
+        return Icons.info;
+    }
   }
 
   Widget _buildEmptyState() {

@@ -2,30 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kifinserv/constants/app_colors.dart';
-import 'package:kifinserv/models/application_model.dart';
-import 'package:kifinserv/services/application_storage_service.dart';
-
+import 'package:kifinserv/models/user_counts_model.dart';
+import 'package:kifinserv/services/application_service.dart';
 
 class TrackApplicationsScreen extends StatefulWidget {
   const TrackApplicationsScreen({super.key});
 
   @override
-  State<TrackApplicationsScreen> createState() => _TrackApplicationsScreenState();
+  State<TrackApplicationsScreen> createState() =>
+      _TrackApplicationsScreenState();
 }
 
 class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
-  final ApplicationStorageService _storageService = ApplicationStorageService();
-  List<LoanApplication> applications = [];
+  UserCountsResponse? userCountsResponse;
+  List<ApplicationData> applications = [];
   Map<String, int> stats = {};
   bool isLoading = true;
   String selectedFilter = 'all';
 
   final List<Map<String, dynamic>> filterOptions = [
     {'value': 'all', 'label': 'All Applications', 'icon': Icons.list},
-    {'value': 'submitted', 'label': 'Submitted', 'icon': Icons.send},
-    {'value': 'under_review', 'label': 'Under Review', 'icon': Icons.hourglass_empty},
+    {'value': 'pending', 'label': 'Pending', 'icon': Icons.hourglass_empty},
     {'value': 'approved', 'label': 'Approved', 'icon': Icons.check_circle},
-    {'value': 'disbursed', 'label': 'Disbursed', 'icon': Icons.account_balance_wallet},
+    {
+      'value': 'disbursed',
+      'label': 'Disbursed',
+      'icon': Icons.account_balance_wallet
+    },
     {'value': 'rejected', 'label': 'Rejected', 'icon': Icons.cancel},
   ];
 
@@ -37,16 +40,26 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
 
   Future<void> _loadApplications() async {
     setState(() => isLoading = true);
-    
+
     try {
-      final allApps = await _storageService.getAllApplications();
-      final appStats = await _storageService.getApplicationStats();
-      
+      final response = await ApplicationService.getUserCounts();
+
       setState(() {
-        applications = selectedFilter == 'all' 
-            ? allApps 
-            : allApps.where((app) => app.status == selectedFilter).toList();
-        stats = appStats;
+        userCountsResponse = response;
+        applications = selectedFilter == 'all'
+            ? response.applications
+            : response.applications
+                .where((app) => app.status == selectedFilter)
+                .toList();
+
+        // Calculate stats from the response
+        stats = {
+          'total': response.pagination.totalApplications,
+          'pending': response.statusCounts.pending,
+          'approved': response.statusCounts.approved,
+          'rejected': response.statusCounts.rejected,
+          'disbursed': response.statusCounts.disbursed,
+        };
         isLoading = false;
       });
     } catch (e) {
@@ -75,31 +88,14 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
         backgroundColor: AppColors.royalBlue,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white, size: screenWidth * 0.064),
+          icon: Icon(Icons.arrow_back,
+              color: Colors.white, size: screenWidth * 0.064),
           onPressed: () => Get.back(),
         ),
         actions: [
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: Colors.white),
-            onSelected: (value) async {
-              if (value == 'add_sample') {
-                await _storageService.addSampleData();
-                _loadApplications();
-                Get.snackbar('Success', 'Sample data added');
-              } else if (value == 'clear_all') {
-                _showClearConfirmation();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'add_sample',
-                child: Text('Add Sample Data'),
-              ),
-              const PopupMenuItem(
-                value: 'clear_all',
-                child: Text('Clear All Data'),
-              ),
-            ],
+          IconButton(
+            icon: Icon(Icons.refresh, color: Colors.white),
+            onPressed: _loadApplications,
           ),
         ],
       ),
@@ -129,16 +125,24 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildStatCard('Total', stats['total'] ?? 0, Icons.apps, Colors.white, screenWidth),
-                      _buildStatCard('Pending', (stats['submitted'] ?? 0) + (stats['under_review'] ?? 0), Icons.pending, Colors.orange, screenWidth),
-                      _buildStatCard('Approved', (stats['approved'] ?? 0) + (stats['disbursed'] ?? 0), Icons.check_circle, Colors.green, screenWidth),
+                      _buildStatCard('Total', stats['total'] ?? 0, Icons.apps,
+                          Colors.white, screenWidth),
+                      _buildStatCard('Pending', stats['pending'] ?? 0,
+                          Icons.pending, Colors.orange, screenWidth),
+                      _buildStatCard(
+                          'Approved',
+                          (stats['approved'] ?? 0) + (stats['disbursed'] ?? 0),
+                          Icons.check_circle,
+                          Colors.green,
+                          screenWidth),
                     ],
                   ),
                   SizedBox(height: screenHeight * 0.02),
-                  
+
                   // Filter Dropdown
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(screenWidth * 0.03),
@@ -148,7 +152,8 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                         value: selectedFilter,
                         dropdownColor: AppColors.royalBlue,
                         style: GoogleFonts.poppins(color: Colors.white),
-                        icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+                        icon: const Icon(Icons.arrow_drop_down,
+                            color: Colors.white),
                         onChanged: (value) {
                           setState(() {
                             selectedFilter = value!;
@@ -160,7 +165,9 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                             value: option['value'],
                             child: Row(
                               children: [
-                                Icon(option['icon'], color: Colors.white, size: screenWidth * 0.05),
+                                Icon(option['icon'],
+                                    color: Colors.white,
+                                    size: screenWidth * 0.05),
                                 SizedBox(width: screenWidth * 0.02),
                                 Text(
                                   option['label'],
@@ -191,7 +198,8 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                           itemCount: applications.length,
                           itemBuilder: (context, index) {
                             final application = applications[index];
-                            return _buildApplicationCard(application, screenWidth, screenHeight);
+                            return _buildApplicationCard(
+                                application, screenWidth, screenHeight);
                           },
                         ),
             ),
@@ -201,7 +209,8 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, int count, IconData icon, Color color, double screenWidth) {
+  Widget _buildStatCard(
+      String title, int count, IconData icon, Color color, double screenWidth) {
     return Column(
       children: [
         Container(
@@ -232,13 +241,17 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
     );
   }
 
-  Widget _buildApplicationCard(LoanApplication application, double screenWidth, double screenHeight) {
+  Widget _buildApplicationCard(
+      ApplicationData application, double screenWidth, double screenHeight) {
+    Color statusColor = _getStatusColor(application.status);
+    IconData statusIcon = _getStatusIcon(application.status);
+
     return Container(
       margin: EdgeInsets.only(bottom: screenHeight * 0.015),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(screenWidth * 0.04),
-        border: Border.all(color: application.statusColor.withOpacity(0.3)),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.1),
@@ -261,7 +274,7 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        application.loanType,
+                        application.loanTypeName,
                         style: GoogleFonts.poppins(
                           fontSize: screenWidth * 0.043,
                           fontWeight: FontWeight.w600,
@@ -275,6 +288,13 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                           color: Colors.grey[600],
                         ),
                       ),
+                      Text(
+                        'Vendor: ${application.vendor.companyName}',
+                        style: GoogleFonts.poppins(
+                          fontSize: screenWidth * 0.03,
+                          color: Colors.grey[600],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -284,16 +304,16 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                     vertical: screenHeight * 0.008,
                   ),
                   decoration: BoxDecoration(
-                    color: application.statusColor.withOpacity(0.1),
+                    color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(screenWidth * 0.05),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        application.statusIcon,
+                        statusIcon,
                         size: screenWidth * 0.04,
-                        color: application.statusColor,
+                        color: statusColor,
                       ),
                       SizedBox(width: screenWidth * 0.015),
                       Text(
@@ -301,7 +321,7 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                         style: GoogleFonts.poppins(
                           fontSize: screenWidth * 0.032,
                           fontWeight: FontWeight.w600,
-                          color: application.statusColor,
+                          color: statusColor,
                         ),
                       ),
                     ],
@@ -313,41 +333,41 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
             SizedBox(height: screenHeight * 0.015),
 
             // Application Details
-            if (application.loanAmount != null) ...[
-              Row(
-                children: [
-                  Icon(Icons.currency_rupee, color: Colors.grey[600], size: screenWidth * 0.04),
-                  SizedBox(width: screenWidth * 0.02),
-                  Text(
-                    'Amount: ₹${application.loanAmount!.toStringAsFixed(0)}',
-                    style: GoogleFonts.poppins(
-                      fontSize: screenWidth * 0.037,
-                      color: Colors.grey[700],
-                    ),
+            Row(
+              children: [
+                Icon(Icons.badge,
+                    color: Colors.grey[600], size: screenWidth * 0.04),
+                SizedBox(width: screenWidth * 0.02),
+                Text(
+                  'KYC: ${application.kycStatus.toUpperCase()}',
+                  style: GoogleFonts.poppins(
+                    fontSize: screenWidth * 0.037,
+                    color: Colors.grey[700],
                   ),
-                  if (application.interestRate != null) ...[
-                    SizedBox(width: screenWidth * 0.04),
-                    Text(
-                      '@ ${application.interestRate}%',
-                      style: GoogleFonts.poppins(
-                        fontSize: screenWidth * 0.037,
-                        color: Colors.green[600],
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              SizedBox(height: screenHeight * 0.01),
-            ],
+                ),
+                SizedBox(width: screenWidth * 0.04),
+                Icon(Icons.account_balance,
+                    color: Colors.grey[600], size: screenWidth * 0.04),
+                SizedBox(width: screenWidth * 0.02),
+                Text(
+                  'CIBIL: ${application.cibilStatus.replaceAll('_', ' ').toUpperCase()}',
+                  style: GoogleFonts.poppins(
+                    fontSize: screenWidth * 0.037,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: screenHeight * 0.01),
 
             // Submission Date
             Row(
               children: [
-                Icon(Icons.schedule, color: Colors.grey[600], size: screenWidth * 0.04),
+                Icon(Icons.schedule,
+                    color: Colors.grey[600], size: screenWidth * 0.04),
                 SizedBox(width: screenWidth * 0.02),
                 Text(
-                  'Submitted: ${_formatDate(application.submissionDate)}',
+                  'Created: ${_formatApiDate(application.createdAt)}',
                   style: GoogleFonts.poppins(
                     fontSize: screenWidth * 0.035,
                     color: Colors.grey[600],
@@ -369,21 +389,24 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.royalBlue,
                       side: BorderSide(color: AppColors.royalBlue),
-                      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.012),
+                      padding:
+                          EdgeInsets.symmetric(vertical: screenHeight * 0.012),
                     ),
                   ),
                 ),
                 SizedBox(width: screenWidth * 0.03),
-                if (application.status == 'submitted' || application.status == 'under_review') ...[
+                if (application.status == 'pending') ...[
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => _simulateStatusUpdate(application),
-                      icon: Icon(Icons.update, size: screenWidth * 0.04),
-                      label: Text('Update Status'),
+                      onPressed: () =>
+                          Get.snackbar('Info', 'Status updates coming soon!'),
+                      icon: Icon(Icons.info, size: screenWidth * 0.04),
+                      label: Text('Track Status'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: application.statusColor,
+                        backgroundColor: statusColor,
                         foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.012),
+                        padding: EdgeInsets.symmetric(
+                            vertical: screenHeight * 0.012),
                       ),
                     ),
                   ),
@@ -408,7 +431,7 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
           ),
           SizedBox(height: screenHeight * 0.02),
           Text(
-            selectedFilter == 'all' 
+            selectedFilter == 'all'
                 ? 'No applications found'
                 : 'No ${selectedFilter.replaceAll('_', ' ')} applications',
             style: GoogleFonts.poppins(
@@ -447,7 +470,7 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
     );
   }
 
-  void _showApplicationDetails(LoanApplication application) {
+  void _showApplicationDetails(ApplicationData application) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -478,7 +501,6 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
                   Text(
                     'Application Details',
                     style: GoogleFonts.poppins(
@@ -487,62 +509,30 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
-                  _buildDetailRow('Application ID', application.id),
-                  _buildDetailRow('Loan Type', application.loanType),
-                  _buildDetailRow('Applicant Name', application.applicantName),
-                  _buildDetailRow('Email', application.email),
-                  _buildDetailRow('Mobile', application.mobile),
-                  _buildDetailRow('Address', application.address),
+                  _buildDetailRow('Application ID', application.id.toString()),
+                  _buildDetailRow('Loan Type', application.loanTypeName),
+                  _buildDetailRow('Applicant Name', application.applicant.name),
+                  _buildDetailRow('Email', application.applicant.email),
+                  _buildDetailRow('Vendor', application.vendor.companyName),
+                  _buildDetailRow('Vehicle',
+                      '${application.vehicle.vehicleName} (${application.vehicle.model})'),
+                  _buildDetailRow(
+                      'Registration', application.vehicle.registrationNumber),
                   _buildDetailRow('Status', application.statusDisplayName),
-                  _buildDetailRow('Submission Date', _formatDate(application.submissionDate)),
-                  
-                  if (application.loanAmount != null)
-                    _buildDetailRow('Loan Amount', '₹${application.loanAmount!.toStringAsFixed(0)}'),
-                  
-                  if (application.interestRate != null)
-                    _buildDetailRow('Interest Rate', '${application.interestRate}%'),
-                  
-                  const SizedBox(height: 20),
-                  
-                  Text(
-                    'Loan Details',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  
-                  ...application.loanDetails.entries.map((entry) =>
-                    _buildDetailRow(entry.key.toUpperCase(), entry.value?.toString() ?? 'N/A')
-                  ).toList(),
-                  
-                  const SizedBox(height: 20),
-                  
-                  Text(
-                    'References',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  
-                  if (application.references['reference1'] != null) ...[
-                    Text('Reference 1:', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-                    _buildDetailRow('Name', application.references['reference1']['name']),
-                    _buildDetailRow('Phone', application.references['reference1']['phone']),
-                    _buildDetailRow('Relation', application.references['reference1']['relation']),
-                    const SizedBox(height: 10),
-                  ],
-                  
-                  if (application.references['reference2'] != null) ...[
-                    Text('Reference 2:', style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-                    _buildDetailRow('Name', application.references['reference2']['name']),
-                    _buildDetailRow('Phone', application.references['reference2']['phone']),
-                    _buildDetailRow('Relation', application.references['reference2']['relation']),
-                  ],
+                  _buildDetailRow(
+                      'KYC Status', application.kycStatus.toUpperCase()),
+                  _buildDetailRow(
+                      'CIBIL Status',
+                      application.cibilStatus
+                          .replaceAll('_', ' ')
+                          .toUpperCase()),
+                  if (application.cibilScore != null)
+                    _buildDetailRow(
+                        'CIBIL Score', application.cibilScore.toString()),
+                  _buildDetailRow(
+                      'Created Date', _formatApiDate(application.createdAt)),
+                  _buildDetailRow(
+                      'Updated Date', _formatApiDate(application.updatedAt)),
                 ],
               ),
             ),
@@ -581,62 +571,42 @@ class _TrackApplicationsScreenState extends State<TrackApplicationsScreen> {
     );
   }
 
-  void _simulateStatusUpdate(LoanApplication application) async {
-    String newStatus;
-    switch (application.status) {
-      case 'submitted':
-        newStatus = 'under_review';
-        break;
-      case 'under_review':
-        newStatus = 'approved';
-        break;
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Colors.orange;
+      case 'approved':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'disbursed':
+        return Colors.blue;
       default:
-        return;
+        return Colors.grey;
     }
-
-    await _storageService.updateApplicationStatus(
-      application.id,
-      newStatus,
-      reviewDate: newStatus == 'under_review' ? DateTime.now() : application.reviewDate,
-      approvalDate: newStatus == 'approved' ? DateTime.now() : null,
-    );
-
-    Get.snackbar(
-      'Status Updated',
-      'Application ${application.id} is now ${newStatus.replaceAll('_', ' ')}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
-
-    _loadApplications();
   }
 
-  void _showClearConfirmation() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Clear All Data'),
-        content: const Text('Are you sure you want to delete all applications? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _storageService.clearAllApplications();
-              Get.back();
-              _loadApplications();
-              Get.snackbar('Success', 'All applications cleared');
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+  IconData _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Icons.hourglass_empty;
+      case 'approved':
+        return Icons.check_circle;
+      case 'rejected':
+        return Icons.cancel;
+      case 'disbursed':
+        return Icons.account_balance;
+      default:
+        return Icons.info;
+    }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  String _formatApiDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return dateString;
+    }
   }
 }

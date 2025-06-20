@@ -3,6 +3,8 @@ import 'package:get_storage/get_storage.dart';
 import 'package:kifinserv/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import '../../services/jwt_service.dart';
+import '../../services/application_service.dart';
+import '../../models/user_counts_model.dart';
 
 class HomeController extends GetxController {
   final box = GetStorage();
@@ -13,11 +15,18 @@ class HomeController extends GetxController {
   var userRole = 'User'.obs;
   var userId = ''.obs;
 
+  // Application data reactive variables
+  var userCountsData = Rxn<UserCountsResponse>();
+  var isLoadingApplications = false.obs;
+  var applicationError = ''.obs;
+
   @override
   void onInit() {
     super.onInit();
     // Load user info when controller initializes
     _loadUserInfo();
+    // Load application data
+    fetchUserApplications();
   }
 
   void _loadUserInfo() {
@@ -127,6 +136,27 @@ class HomeController extends GetxController {
     }
   }
 
+  // Fetch user applications from API
+  Future<void> fetchUserApplications() async {
+    try {
+      isLoadingApplications.value = true;
+      applicationError.value = '';
+      
+      print('🔄 Fetching user applications...');
+      final response = await ApplicationService.getUserCounts();
+      
+      userCountsData.value = response;
+      print('✅ Successfully loaded ${response.pagination.totalApplications} applications');
+      
+    } catch (e) {
+      print('❌ Error fetching applications: $e');
+      applicationError.value = e.toString().replaceAll('Exception: ', '');
+      userCountsData.value = null;
+    } finally {
+      isLoadingApplications.value = false;
+    }
+  }
+
   // Getter methods that return reactive values
   String getUserName() => userName.value;
   String getUserEmail() => userEmail.value;
@@ -161,6 +191,31 @@ class HomeController extends GetxController {
 
   void refreshUserInfo() {
     _loadUserInfo();
+  }
+
+  // Get application statistics
+  Map<String, int> getApplicationStats() {
+    final data = userCountsData.value;
+    if (data == null) {
+      return {
+        'total': 0,
+        'pending': 0,
+        'approved': 0,
+        'evLoans': 0,
+        'goldLoans': 0,
+      };
+    }
+
+    final evLoans = data.applications.where((app) => app.isEVLoan).length;
+    final goldLoans = data.applications.where((app) => app.isGoldLoan).length;
+
+    return {
+      'total': data.pagination.totalApplications,
+      'pending': data.statusCounts.totalPending,
+      'approved': data.statusCounts.totalApproved,
+      'evLoans': evLoans,
+      'goldLoans': goldLoans,
+    };
   }
 
   void logout() async {
@@ -198,45 +253,30 @@ class HomeController extends GetxController {
           'Success',
           'Logged out successfully',
           snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[800],
         );
 
         Get.offAllNamed(AppRoutes.LOGIN);
       }
     } catch (e) {
-      Get.back();
+      Get.back(); // Close loading dialog
       Get.snackbar(
         'Error',
-        'Logout failed. Please try again.',
+        'Failed to logout: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[800],
       );
     }
   }
 
   Future<void> _clearAllData() async {
-    // Clear reactive variables
-    userName.value = 'User';
-    userEmail.value = '';
-    userRole.value = 'User';
-    userId.value = '';
-
-    // Clear storage
-    box.remove('authToken');
-    box.remove('isLoggedIn');
-    box.remove('userEmail');
-    box.remove('userName');
-    box.remove('userId');
-    box.remove('userRole');
-    box.remove('userMobile');
-    box.remove('lastLoginTime');
-    box.remove('registrationToken');
-    box.remove('tempToken');
-    box.remove('tempUserName');
-    box.remove('tempUserEmail');
-    box.remove('tempUserMobile');
-    box.remove('applicationData');
-    box.remove('loanApplications');
-    box.remove('cacheData');
-
-    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      box.erase();
+      print('📦 All data cleared successfully');
+    } catch (e) {
+      print('❌ Error clearing data: $e');
+    }
   }
 }
