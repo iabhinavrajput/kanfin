@@ -365,11 +365,6 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
 
           // Support Section
           SharedWidgets.buildSupportSection(),
-
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: 16.h),
-            child: ApplicationStatsWidget(),
-          ),
         ],
       ),
     );
@@ -611,7 +606,7 @@ class _HomeTabState extends State<HomeTab> with TickerProviderStateMixin {
     );
   }
 
-    Widget _buildRecentActivitySection(List<ApplicationData> applications) {
+  Widget _buildRecentActivitySection(List<ApplicationData> applications) {
     final recentApps = applications.take(isTablet ? 5 : 3).toList();
 
     return Column(
