@@ -160,7 +160,7 @@ class LoanApplication {
 class ApplicationRequest {
   final int userId;
   final int loanType;
-  final String confirmedLoanType;
+  final int confirmedLoanType;
   final int vendorId;
   final int? vehicleId; // Optional for Gold loans
   final String name;

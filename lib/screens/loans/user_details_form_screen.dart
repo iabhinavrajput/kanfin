@@ -152,7 +152,7 @@ class _UserDetailsFormScreenState extends State<UserDetailsFormScreen> {
       final request = ApplicationRequest(
         userId: userId,
         loanType: selectedLoanType!.id,
-        confirmedLoanType: selectedLoanType!.loanType,
+        confirmedLoanType: selectedLoanType!.id,
         vendorId: selectedVendor!.id,
         vehicleId: selectedVehicle?.id, // Only for EV loans
         name: _nameController.text.trim(),
